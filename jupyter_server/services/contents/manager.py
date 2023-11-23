@@ -448,14 +448,15 @@ class ContentsManager(LoggingConfigurable):
         """
         return self.file_exists(path) or self.dir_exists(path)
 
-    def get(self, path, content=True, type=None, format=None):
-        """
-        Get a file or directory model.
+    def get(self, path, content=True, type=None, format=None, require_hash=False):
+        """Get a file or directory model.
+        
+        Parameters
+        ----------
+        require_hash : bool
+            Whether the file hash must be returned or not.
 
-        Support for hash:
-            If a ContentManager supports calculating the hash value of a file,
-            `ContentManager.support_hash` should be True and this function will accept an `require_hash` parameter,
-            will return a dict with `hash` and `hash_algorithm` key.
+        *Changed in version 2.11*: The *require_hash* parameter was added.
         """
         raise NotImplementedError
 

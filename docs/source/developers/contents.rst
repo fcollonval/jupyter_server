@@ -65,7 +65,6 @@ Models may contain the following entries:
 +--------------------+-----------+------------------------------+
 |**hash**            |unicode or |The hash of the contents.     |
 |                    |``None``   |                              |
-|                    |           |                              |
 +--------------------+-----------+------------------------------+
 |**hash_algorithm**  |unicode    |The algorithm used to compute |
 |                    |           |hash value.                   |

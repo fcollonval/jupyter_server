@@ -270,7 +270,7 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
         model["size"] = size
         model["writable"] = self.is_writable(path)
         model["hash"] = None
-        model["hash_algorithm"] = self.hash_algorithm
+        model["hash_algorithm"] = None
 
         return model
 
@@ -356,10 +356,9 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
         os_path = self._get_os_path(path)
         model["mimetype"] = mimetypes.guess_type(os_path)[0]
 
-        hash_value = None
-        if content or require_hash:
-            content, format, hash_value = self._read_file(
-                os_path, format, require_hash=require_hash
+        if content:
+            content, format = self._read_file(
+                os_path, format
             )
             if model["mimetype"] is None:
                 default_mime = {
@@ -371,8 +370,10 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
             model.update(
                 content=content,
                 format=format,
-                hash=hash_value,
             )
+
+        if require_hash:
+            model.update(**self._get_hash(model))
 
         return model
 
@@ -397,13 +398,13 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
             model["content"] = nb
             model["format"] = "json"
             self.validate_notebook_model(model, validation_error)
+        
         if require_hash:
-            # FIXME: Here we may read file twice while content=True
-            model["hash"] = self._get_hash_from_file(os_path)
+            model.update(**self._get_hash(model))
 
         return model
 
-    def get(self, path, content=True, type=None, format=None, require_hash=None):
+    def get(self, path, content=True, type=None, format=None, require_hash=False):
         """Takes a path for an entity and returns its model
 
         Parameters
@@ -822,8 +823,8 @@ class AsyncFileContentsManager(FileContentsManager, AsyncFileManagerMixin, Async
         os_path = self._get_os_path(path)
         model["mimetype"] = mimetypes.guess_type(os_path)[0]
 
-        if content or require_hash:
-            content, format, hash_value = await self._read_file(
+        if content:
+            content, format = await self._read_file(
                 os_path, format, require_hash=require_hash
             )
             if model["mimetype"] is None:
@@ -833,7 +834,13 @@ class AsyncFileContentsManager(FileContentsManager, AsyncFileManagerMixin, Async
                 }[format]
                 model["mimetype"] = default_mime
 
-            model.update(content=content, format=format, hash=hash_value)
+            model.update(
+                content=content,
+                format=format,
+            )
+
+        if require_hash:
+            model.update(**self._get_hash(model))
 
         return model
 
@@ -856,9 +863,9 @@ class AsyncFileContentsManager(FileContentsManager, AsyncFileManagerMixin, Async
             model["content"] = nb
             model["format"] = "json"
             self.validate_notebook_model(model, validation_error)
+
         if require_hash:
-            # FIXME: Here we may read file twice while content=True
-            model["hash"] = await self._get_hash_from_file(os_path)
+            model.update(**(await self._get_hash(model)))
 
         return model
 
