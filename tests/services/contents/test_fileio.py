@@ -169,18 +169,18 @@ async def test_async_file_manager_mixin(tmpdir):
     mixin.log = logging.getLogger()
     bad_content = tmpdir / "bad_content.ipynb"
     bad_content.write_text("{}", "utf8")
-    # Same as `echo -n {} | sha256sum`
-    assert (
-        await mixin._get_hash_from_file(bad_content)
-        == "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
-    )
     with pytest.raises(HTTPError):
         await mixin._read_notebook(bad_content)
     other = path_to_intermediate(bad_content)
     with open(other, "w") as fid:
         json.dump(new_notebook(), fid)
     mixin.use_atomic_writing = True
-    nb = await mixin._read_notebook(bad_content)
+    nb, bcontent = await mixin._read_notebook(bad_content, raw=True)
+    # Same as `echo -n {} | sha256sum`
+    assert (
+        mixin._get_hash(bcontent)
+        == "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    )
     validate(nb)
 
     with pytest.raises(HTTPError):
@@ -188,3 +188,27 @@ async def test_async_file_manager_mixin(tmpdir):
 
     with pytest.raises(HTTPError):
         await mixin._save_file(tmpdir / "foo", "foo", "bar")
+
+
+async def test_AsyncFileManagerMixin_read_notebook_no_raw(tmpdir):
+    mixin = AsyncFileManagerMixin()
+    mixin.log = logging.getLogger()
+    bad_content = tmpdir / "bad_content.ipynb"
+    bad_content.write_text("{}", "utf8")
+
+    mixin.use_atomic_writing = True
+    answer = await mixin._read_notebook(bad_content, raw=False)
+
+    assert not isinstance(answer, tuple)
+
+
+async def test_AsyncFileManagerMixin_read_file_no_raw(tmpdir):
+    mixin = AsyncFileManagerMixin()
+    mixin.log = logging.getLogger()
+    file_path = tmpdir / "bad_content.text"
+    file_path.write_text("blablabla", "utf8")
+
+    mixin.use_atomic_writing = True
+    answer = await mixin._read_file(file_path, "text", raw=False)
+
+    assert len(answer) == 2
