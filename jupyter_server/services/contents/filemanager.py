@@ -48,7 +48,6 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
     root_dir = Unicode(config=True)
 
     max_copy_folder_size_mb = Int(500, config=True, help="The max folder size that can be copied")
-    support_hash = Bool(True, config=False, help="Support require_hash argument in `get`")
 
     @default("root_dir")
     def _default_root_dir(self):

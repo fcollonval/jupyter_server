@@ -111,7 +111,6 @@ class ContentsManager(LoggingConfigurable):
         return value
 
     allow_hidden = Bool(False, config=True, help="Allow access to hidden files")
-    support_hash = Bool(False, config=False, help="Support require_hash argument in `get`")
 
     notary = Instance(sign.NotebookNotary)
 
@@ -450,7 +449,7 @@ class ContentsManager(LoggingConfigurable):
 
     def get(self, path, content=True, type=None, format=None, require_hash=False):
         """Get a file or directory model.
-        
+
         Parameters
         ----------
         require_hash : bool
@@ -858,14 +857,15 @@ class AsyncContentsManager(ContentsManager):
             self.dir_exists(path)
         )
 
-    async def get(self, path, content=True, type=None, format=None):
-        """
-        Get a file or directory model.
+    async def get(self, path, content=True, type=None, format=None, require_hash=False):
+        """Get a file or directory model.
 
-        Support for hash:
-            If a ContentManager supports calculating the hash value of a file,
-            `ContentManager.support_hash` should be True and this function will accept an `require_hash` parameter,
-            will return a dict with `hash` and `hash_algorithm` key.
+        Parameters
+        ----------
+        require_hash : bool
+            Whether the file hash must be returned or not.
+
+        *Changed in version 2.11*: The *require_hash* parameter was added.
         """
         raise NotImplementedError
 

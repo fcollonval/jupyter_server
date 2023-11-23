@@ -62,10 +62,10 @@ def validate_model(model, expect_content=False, expect_hash=False):
         "last_modified",
         "mimetype",
         "content",
-        "format"
+        "format",
     }
     if expect_hash:
-         required_keys.update("hash", "hash_algorithm")
+        required_keys.update(["hash", "hash_algorithm"])
     missing = required_keys - set(model.keys())
     if missing:
         raise web.HTTPError(
@@ -146,21 +146,32 @@ class ContentsHandler(ContentsAPIHandler):
             await self._finish_error(
                 HTTPStatus.NOT_FOUND, f"file or directory {path!r} does not exist"
             )
-        kwargs = {
-            "path": path,
-            "type": type,
-            "format": format,
-            "content": content,
-        }
-
-        # See https://github.com/jupyter-server/jupyter_server/issues/1366
-        # try not breaking `ContentManager.get` API while intro `hash` argument to ContentManager
-        if cm.support_hash:
-            kwargs["require_hash"] = require_hash
 
         try:
-            model = await ensure_async(self.contents_manager.get(**kwargs))
-            validate_model(model, expect_content=content, expect_hash=require_hash)
+            expect_hash = require_hash
+            try:
+                model = await ensure_async(
+                    self.contents_manager.get(
+                        path=path,
+                        type=type,
+                        format=format,
+                        content=content,
+                        require_hash=require_hash,
+                    )
+                )
+            except TypeError:
+                # Fallback for ContentsManager not handling the require_hash argument
+                # introduced in 2.11
+                expect_hash = False
+                model = await ensure_async(
+                    self.contents_manager.get(
+                        path=path,
+                        type=type,
+                        format=format,
+                        content=content,
+                    )
+                )
+            validate_model(model, expect_content=content, expect_hash=expect_hash)
             self._finish_model(model, location=False)
         except web.HTTPError as exc:
             # 404 is okay in this context, catch exception and return 404 code to prevent stack trace on client

@@ -281,11 +281,13 @@ class FileManagerMixin(LoggingConfigurable, Configurable):
         answer = self._read_file(os_path, "text", raw=raw)
 
         try:
-            return nbformat.reads(
+            nb = nbformat.reads(
                 answer[0],
                 as_version=as_version,
                 capture_validation_error=capture_validation_error,
             )
+
+            return (nb, answer[2]) if raw else nb
         except Exception as e:
             e_orig = e
 
@@ -304,10 +306,9 @@ class FileManagerMixin(LoggingConfigurable, Configurable):
         invalid_file = path_to_invalid(os_path)
         replace_file(os_path, invalid_file)
         replace_file(tmp_path, os_path)
-        nb = self._read_notebook(
-            os_path, as_version, capture_validation_error=capture_validation_error
+        return self._read_notebook(
+            os_path, as_version, capture_validation_error=capture_validation_error, raw=raw
         )
-        return nb, answer[2] if raw else nb
 
     def _save_notebook(self, os_path, nb, capture_validation_error=None):
         """Save a notebook to an os_path."""
@@ -368,17 +369,19 @@ class FileManagerMixin(LoggingConfigurable, Configurable):
 
         if format == "byte":
             # Not for http response but internal use
-            return bcontent, "byte", bcontent if raw else bcontent, "byte"
+            return (bcontent, "byte", bcontent) if raw else (bcontent, "byte")
 
         if format is None or format == "text":
             # Try to interpret as unicode if format is unknown or if unicode
             # was explicitly requested.
             try:
                 return (
-                    bcontent.decode("utf8"),
-                    "text",
-                    bcontent if raw else bcontent.decode("utf8"),
-                    "text",
+                    (bcontent.decode("utf8"), "text", bcontent)
+                    if raw
+                    else (
+                        bcontent.decode("utf8"),
+                        "text",
+                    )
                 )
             except UnicodeError as e:
                 if format == "text":
@@ -388,10 +391,12 @@ class FileManagerMixin(LoggingConfigurable, Configurable):
                         reason="bad format",
                     ) from e
         return (
-            encodebytes(bcontent).decode("ascii"),
-            "base64",
-            bcontent if raw else encodebytes(bcontent).decode("ascii"),
-            "base64",
+            (encodebytes(bcontent).decode("ascii"), "base64", bcontent)
+            if raw
+            else (
+                encodebytes(bcontent).decode("ascii"),
+                "base64",
+            )
         )
 
     def _save_file(self, os_path, content, format):
@@ -433,7 +438,7 @@ class AsyncFileManagerMixin(FileManagerMixin):
         answer = await self._read_file(os_path, "text", raw)
 
         try:
-            return await run_sync(
+            nb = await run_sync(
                 partial(
                     nbformat.reads,
                     as_version=as_version,
@@ -441,6 +446,7 @@ class AsyncFileManagerMixin(FileManagerMixin):
                 ),
                 answer[0],
             )
+            return (nb, answer[2]) if raw else nb
         except Exception as e:
             e_orig = e
 
@@ -459,11 +465,11 @@ class AsyncFileManagerMixin(FileManagerMixin):
         invalid_file = path_to_invalid(os_path)
         await async_replace_file(os_path, invalid_file)
         await async_replace_file(tmp_path, os_path)
-        nb = await self._read_notebook(
-            os_path, as_version, capture_validation_error=capture_validation_error
+        answer = await self._read_notebook(
+            os_path, as_version, capture_validation_error=capture_validation_error, raw=raw
         )
 
-        return nb, answer[2] if raw else nb
+        return answer
 
     async def _save_notebook(self, os_path, nb, capture_validation_error=None):
         """Save a notebook to an os_path."""
@@ -508,17 +514,19 @@ class AsyncFileManagerMixin(FileManagerMixin):
 
         if format == "byte":
             # Not for http response but internal use
-            return bcontent, "byte", bcontent if raw else bcontent, "byte"
+            return (bcontent, "byte", bcontent) if raw else (bcontent, "byte")
 
         if format is None or format == "text":
             # Try to interpret as unicode if format is unknown or if unicode
             # was explicitly requested.
             try:
                 return (
-                    bcontent.decode("utf8"),
-                    "text",
-                    bcontent if raw else bcontent.decode("utf8"),
-                    "text",
+                    (bcontent.decode("utf8"), "text", bcontent)
+                    if raw
+                    else (
+                        bcontent.decode("utf8"),
+                        "text",
+                    )
                 )
             except UnicodeError as e:
                 if format == "text":
@@ -528,10 +536,9 @@ class AsyncFileManagerMixin(FileManagerMixin):
                         reason="bad format",
                     ) from e
         return (
-            encodebytes(bcontent).decode("ascii"),
-            "base64",
-            bcontent if raw else encodebytes(bcontent).decode("ascii"),
-            "base64",
+            (encodebytes(bcontent).decode("ascii"), "base64", bcontent)
+            if raw
+            else (encodebytes(bcontent).decode("ascii"), "base64")
         )
 
     async def _save_file(self, os_path, content, format):

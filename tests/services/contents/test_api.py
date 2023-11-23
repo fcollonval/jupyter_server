@@ -97,9 +97,8 @@ async def test_get_nb_contents(jp_fetch, contents, path, name):
     assert model["path"] == nbpath
     assert model["type"] == "notebook"
     assert "content" in model
-    assert "hash" in model
-    assert model["hash"] == None
-    assert "hash_algorithm" in model
+    assert model["hash"] is None
+    assert model["hash_algorithm"] is None
     assert model["format"] == "json"
     assert "metadata" in model["content"]
     assert isinstance(model["content"]["metadata"], dict)
